@@ -1,0 +1,33 @@
+{
+    "name": "juriassist",
+    "version": "1.0.0",
+    "description": "A aplicação permite que usuários carreguem documentos jurídicos e interajam com um assistente de IA, que usa tecnologia RAG para fornecer respostas precisas e contextuais sobre processos legais e contratos.",
+    "main": "index.js",
+    "scripts": {
+        "dev": "nodemon src/index.ts",
+        "build": "npx tsc",
+        "start": "node dist/index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@langchain/community": "^0.3.38",
+        "@langchain/core": "^0.3.43",
+        "@langchain/ollama": "^0.2.0",
+        "@langchain/qdrant": "^0.1.2",
+        "@qdrant/js-client-rest": "^1.13.0",
+        "dotenv": "^16.4.7",
+        "express": "^5.1.0",
+        "langchain": "^0.3.19"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.1",
+        "@types/node": "^22.13.16",
+        "nodemon": "^3.1.9",
+        "ts-node": "^10.9.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.8.2"
+    }
+}
