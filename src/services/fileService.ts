@@ -17,8 +17,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 
 export async function uploadFiles(
     files: Express.Multer.File[],
-    model: string,
-    tenantId: string
+    userId: string
 ): Promise<string[]> {
     try {
         const savedFiles: string[] = [];
@@ -30,7 +29,7 @@ export async function uploadFiles(
             savedFiles.push(finalFilePath);
 
             try {
-                await saveToQdrant(filePath, model, tenantId);
+                await saveToQdrant(filePath, userId);
             } catch (error: any) {
                 throw new Error(error);
             } finally {
@@ -45,7 +44,7 @@ export async function uploadFiles(
     }
 }
 
-export async function extractTextFromFile(filePath: string, modelName: string) {
+export async function extractTextFromFile(filePath: string) {
     const splitter = spliter();
     if (!splitter) throw new Error("Splitter not defined.");
 

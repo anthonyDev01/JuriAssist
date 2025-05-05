@@ -1,6 +1,6 @@
 import prisma from "../orm/prisma";
 
-export function getByUserId(userId: string) {
+export function getMessageByUserId(userId: string) {
     return prisma.messages.findMany({
         where: {
             userId,

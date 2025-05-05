@@ -17,27 +17,18 @@ import { createCollection, getRetriever, saveVectors } from "./qdrantService";
 import { extractTextFromFile } from "./fileService";
 import { getMessagesByUserId, saveMessage } from "./messagesService";
 
-const collectionName = process.env.COLLECTION_NAME!;
-
-export async function createCollectionToQdrant(
-    collectionName: string,
-    modelName: string
-) {
+export async function createCollectionToQdrant(collectionName: string) {
     try {
-        const vectorSize = getVectorSize(modelName);
+        const vectorSize = 1024;
         await createCollection(collectionName, vectorSize);
     } catch (err) {
         console.error("Error creating collection:", err);
     }
 }
 
-export async function saveToQdrant(
-    filePath: string,
-    modelName: string,
-    tenantId: string
-) {
+export async function saveToQdrant(filePath: string, userId: string) {
     try {
-        const documents = await extractTextFromFile(filePath, modelName);
+        const documents = await extractTextFromFile(filePath);
 
         console.log(`Total pieces to be stored: ${documents.length}`);
 
@@ -49,7 +40,7 @@ export async function saveToQdrant(
             content: doc.pageContent,
         }));
 
-        await saveVectors(data, embeddings, tenantId);
+        await saveVectors(data, embeddings, userId);
     } catch (err: any) {
         console.error(err);
         throw err;
@@ -62,7 +53,7 @@ export async function generateResponse(userQuestion: string, userId: string) {
 
         const model = getModel();
 
-        const retriever = await getRetriever(embeddings, collectionName, {
+        const retriever = await getRetriever(embeddings, userId, {
             k: 10,
         });
 
@@ -97,10 +88,6 @@ export async function generateResponse(userQuestion: string, userId: string) {
         console.error("Error:", err);
         throw err;
     }
-}
-
-function getVectorSize(modelName: string): number {
-    return modelName === "azure" ? 3072 : modelName === "ollama" ? 1024 : 512;
 }
 
 async function createContextualizedRagchain(

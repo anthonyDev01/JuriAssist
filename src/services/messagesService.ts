@@ -1,7 +1,7 @@
-import { createMessage, getByUserId } from "../repository/messageRepository";
+import { createMessage, getMessageByUserId } from "../repository/messageRepository";
 
 export async function getMessagesByUserId(userId: string) {
-    const messages = await getByUserId(userId);
+    const messages = await getMessageByUserId(userId);
 
     if (messages.length == 0) {
         throw new Error("messages not found");

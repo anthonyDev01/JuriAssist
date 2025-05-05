@@ -32,7 +32,7 @@ export async function createCollection(
 export async function saveVectors(
     data: { id: number; metadata: any; content: string }[],
     embeddings: any,
-    collectionName: string
+    userId: string
 ) {
     try {
         await QdrantVectorStore.fromTexts(
@@ -41,7 +41,7 @@ export async function saveVectors(
             embeddings,
             {
                 url: qdrantUlr,
-                collectionName: collectionName,
+                collectionName: userId,
             }
         );
         console.log("Batch successfully saved to Qdrant.");
@@ -49,6 +49,60 @@ export async function saveVectors(
         console.error("Error saving in Qdrant:", err);
         throw err;
     }
+}
+
+export async function getSavedFiles(collectionName: string) {
+    const documents = new Set();
+    let offset = undefined;
+    const limit = 100;
+
+    while (true) {
+        const res = await client.scroll(collectionName, {
+            limit,
+            offset,
+            with_payload: true,
+        });
+
+        for (const ponto of res.points) {
+            const payload = ponto.payload as any;
+            const source = payload?.metadata?.metadata?.source as string;
+
+            if (typeof source === "string") {
+                documents.add(source);
+            } else {
+                console.error("Fonte inválida:", source);
+            }
+        }
+
+        if (!res.next_page_offset) break;
+        offset = res.next_page_offset;
+    }
+
+    console.log(documents);
+
+    return Array.from(documents);
+}
+
+export async function deleteByFileName(
+    collectionName: string,
+    fileName: string
+) {
+    const filter = {
+        must: [
+            {
+                key: "metadata.metadata.source",
+                match: {
+                    value: fileName,
+                },
+            },
+        ],
+    };
+
+    const res = await client.delete(collectionName, {
+        filter,
+    });
+
+    return res;
 }
 
 export async function getRetriever(

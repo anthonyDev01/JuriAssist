@@ -9,12 +9,13 @@ datasource db {
 
 model User {
   id        String     @id @default(uuid())
+  name      String
   email     String     @unique
   password  String
   messages  Messages[]
   createdAt DateTime   @default(now())
 
-  @@map("chat")
+  @@map("user")
 }
 
 model Messages {
