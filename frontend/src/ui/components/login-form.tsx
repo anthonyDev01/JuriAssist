@@ -9,11 +9,28 @@ import {
 } from "./card";
 import { Input } from "./input";
 import { Label } from "./label";
+import type {
+    SubmitHandler,
+    UseFormHandleSubmit,
+    UseFormRegister,
+} from "react-hook-form";
+import type { User } from "@/core/models/user";
+
+type LoginFormProps = React.ComponentProps<"div"> & {
+    onSubmitCustom: SubmitHandler<User>;
+    handleSubmit: UseFormHandleSubmit<User, User>;
+    loading: boolean;
+    register: UseFormRegister<User>;
+};
 
 export function LoginForm({
     className,
+    onSubmitCustom,
+    handleSubmit,
+    loading,
+    register,
     ...props
-}: React.ComponentProps<"div">) {
+}: LoginFormProps) {
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card className="h-full flex justify-around">
@@ -24,7 +41,7 @@ export function LoginForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form>
+                    <form onSubmit={handleSubmit(onSubmitCustom)}>
                         <div className="flex flex-col gap-6">
                             <div className="grid gap-3">
                                 <Label htmlFor="email">Email</Label>
@@ -32,6 +49,7 @@ export function LoginForm({
                                     id="email"
                                     type="email"
                                     placeholder="m@example.com"
+                                    {...register("email", { required: true })}
                                     required
                                 />
                             </div>
@@ -39,10 +57,22 @@ export function LoginForm({
                                 <div className="flex items-center">
                                     <Label htmlFor="password">Senha</Label>
                                 </div>
-                                <Input id="password" type="password" required />
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    {...register("password", {
+                                        required: true,
+                                        minLength: 8,
+                                    })}
+                                    required
+                                />
                             </div>
                             <div className="flex flex-col gap-3">
-                                <Button type="submit" className="w-full">
+                                <Button
+                                    type="submit"
+                                    className="w-full"
+                                    disabled={loading}
+                                >
                                     Login
                                 </Button>
                             </div>
