@@ -3,6 +3,8 @@ import { QdrantClient } from "@qdrant/js-client-rest";
 import { QdrantVectorStore } from "@langchain/qdrant";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { VectorStoreRetrieverInput } from "@langchain/core/vectorstores";
+import { Document } from "@langchain/core/documents";
+import * as ollamaService from "../services/ollamaService";
 
 const qdrantUlr = process.env.QDRANT_URL;
 const apiKey = process.env.QDRANT_API_KEY || "";
@@ -52,7 +54,7 @@ export async function saveVectors(
 }
 
 export async function getSavedFiles(collectionName: string) {
-    const documents = new Set();
+    const documents = new Map<string, any>();
     let offset = undefined;
     const limit = 100;
 
@@ -65,12 +67,10 @@ export async function getSavedFiles(collectionName: string) {
 
         for (const ponto of res.points) {
             const payload = ponto.payload as any;
-            const source = payload?.metadata?.metadata?.source as string;
+            const metadata = payload?.metadata?.metadata;
 
-            if (typeof source === "string") {
-                documents.add(source);
-            } else {
-                console.error("Fonte inválida:", source);
+            if (typeof metadata === "object") {
+                documents.set(metadata.source, metadata);
             }
         }
 
@@ -78,9 +78,28 @@ export async function getSavedFiles(collectionName: string) {
         offset = res.next_page_offset;
     }
 
-    console.log(documents);
+    return Array.from(documents.values());
+}
 
-    return Array.from(documents);
+export async function fileExistsInCollection(
+    collectionName: string,
+    fileName: string
+): Promise<boolean> {
+    const searchResult = await client.scroll(collectionName, {
+        limit: 1,
+        filter: {
+            must: [
+                {
+                    key: "metadata.metadata.source",
+                    match: {
+                        value: fileName,
+                    },
+                },
+            ],
+        },
+    });
+
+    return searchResult.points.length > 0;
 }
 
 export async function deleteByFileName(
@@ -120,4 +139,27 @@ export async function getRetriever(
     );
 
     return vectorStore.asRetriever(options);
+}
+
+export async function uploadFile(
+    documents: Document<Record<string, any>>[],
+    fileName: string,
+    fileSize: number,
+    type: string,
+    userId: string
+) {
+    const embeddings = ollamaService.getEmbeddings();
+
+    const data = documents.map((doc, index) => ({
+        id: index,
+        metadata: {
+            id: index,
+            source: fileName,
+            size: fileSize,
+            type,
+        },
+        content: doc.pageContent,
+    }));
+
+    await saveVectors(data, embeddings, userId);
 }

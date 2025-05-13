@@ -1,101 +1,103 @@
-import fs from "fs";
 import path from "path";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
-import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 import { TextLoader } from "langchain/document_loaders/fs/text";
 import { JSONLoader } from "langchain/document_loaders/fs/json";
-import { saveToQdrant } from "./ragService";
-import { getModel, spliter } from "./ollamaService";
+import { spliter } from "./ollamaService";
+import * as qdrantService from "./qdrantService";
+import { BadRequestException } from "../exceptions/badRequest";
 
-const UPLOADS_DIR = path.join(__dirname, "../../uploads");
-
-if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+const allowedExtensions = [
+    ".c",
+    ".cs",
+    ".cpp",
+    ".java",
+    ".js",
+    ".ts",
+    ".php",
+    ".py",
+    ".rb",
+    ".sh",
+    ".html",
+    ".css",
+    ".md",
+    ".txt",
+    ".json",
+    ".pdf",
+    ".docx",
+    ".csv",
+];
 
 export async function uploadFiles(
     files: Express.Multer.File[],
     userId: string
-): Promise<string[]> {
-    try {
-        const savedFiles: string[] = [];
+) {
+    for (const file of files) {
+        const exists = await qdrantService.fileExistsInCollection(
+            userId,
+            file.originalname
+        );
 
-        for (const file of files) {
-            const filePath = path.join(UPLOADS_DIR, file.originalname);
-            const finalFilePath = await getUniqueFilePath(filePath);
-            fs.renameSync(file.path, filePath);
-            savedFiles.push(finalFilePath);
+        if (!exists) {
+            const ext = path.extname(file.originalname);
+            const type = ext.replace(".", "").toUpperCase();
 
-            try {
-                await saveToQdrant(filePath, userId);
-            } catch (error: any) {
-                throw new Error(error);
-            } finally {
-                fs.unlinkSync(filePath);
-                console.log(`File ${file.path} deleted successfully.`);
-            }
+            const documents = await extractTextFromBuffer(file);
+            await qdrantService.uploadFile(
+                documents,
+                Buffer.from(file.originalname, "latin1").toString("utf8"),
+                file.size,
+                type,
+                userId
+            );
         }
-
-        return savedFiles;
-    } catch (error: any) {
-        throw error;
     }
 }
 
-export async function extractTextFromFile(filePath: string) {
+async function extractTextFromBuffer(file: Express.Multer.File) {
     const splitter = spliter();
-    if (!splitter) throw new Error("Splitter not defined.");
 
-    const loader = new DirectoryLoader(UPLOADS_DIR, {
-        ".c": (path) => new TextLoader(path),
-        ".cs": (path) => new TextLoader(path),
-        ".cpp": (path) => new TextLoader(path),
-        ".java": (path) => new TextLoader(path),
-        ".js": (path) => new TextLoader(path),
-        ".ts": (path) => new TextLoader(path),
-        ".php": (path) => new TextLoader(path),
-        ".py": (path) => new TextLoader(path),
-        ".rb": (path) => new TextLoader(path),
-        ".sh": (path) => new TextLoader(path),
-        ".html": (path) => new TextLoader(path),
-        ".css": (path) => new TextLoader(path),
-        ".md": (path) => new TextLoader(path),
-        ".txt": (path) => new TextLoader(path),
-        ".json": (path) => new JSONLoader(path),
-        ".pdf": (path) => new PDFLoader(path),
-        ".docx": (path) => new DocxLoader(path),
-        ".csv": (path) => new CSVLoader(path),
-    });
+    if (!splitter) throw new BadRequestException("Splitter not defined.");
 
-    const allowedExtensions = Object.keys(loader.loaders);
-    const fileExtension = path.extname(filePath);
-
-    if (!allowedExtensions.includes(fileExtension)) {
-        throw Error(`Unsupported extension ${fileExtension}`);
-    }
+    const loader = getLoader(
+        file.buffer,
+        file.mimetype,
+        path.extname(file.originalname)
+    );
 
     const rawDocs = await loader.load();
-    const documents = await splitter.splitDocuments(rawDocs);
-    console.log(`Total parts stored: ${documents.length}`);
 
-    return documents;
+    return await splitter.splitDocuments(rawDocs);
 }
 
-export async function getUniqueFilePath(filePath: string): Promise<string> {
-    let uniqueFilePath = filePath;
-    let count = 1;
-
-    while (fs.existsSync(uniqueFilePath)) {
-        const extname = path.extname(filePath);
-        const basename = path.basename(filePath, extname);
-        uniqueFilePath = path.join(
-            UPLOADS_DIR,
-            `${basename} (${count})${extname}`
+function getLoader(
+    fileContent: Buffer,
+    fileMimeType: string,
+    fileExtension: string
+) {
+    if (!allowedExtensions.includes(fileExtension)) {
+        throw new BadRequestException(
+            `Unsupported file extension: ${fileExtension}`
         );
-        count++;
     }
 
-    return uniqueFilePath;
+    const blob = new Blob([fileContent], { type: fileMimeType });
+
+    switch (fileExtension) {
+        case ".pdf":
+            return new PDFLoader(blob);
+
+        case ".json":
+            return new JSONLoader(blob);
+
+        case ".csv":
+            return new CSVLoader(blob);
+
+        case ".docx":
+            return new DocxLoader(blob);
+
+        default:
+            return new TextLoader(blob);
+    }
 }

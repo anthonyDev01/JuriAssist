@@ -1,15 +1,14 @@
-import { createMessage, getMessageByUserId } from "../repository/messageRepository";
+import * as messageRepository from "../repository/messageRepository";
+import { MessageRequest } from "../types/messageRequest";
 
 export async function getMessagesByUserId(userId: string) {
-    const messages = await getMessageByUserId(userId);
-
-    if (messages.length == 0) {
-        throw new Error("messages not found");
-    }
-
-    return messages;
+    return await messageRepository.getMessageByUserId(userId);
 }
 
-export async function saveMessage(data: any) {
-    return await createMessage(data);
+export async function saveMessage(data: MessageRequest) {
+    return await messageRepository.createMessage(data);
+}
+
+export async function countAssistantMessages(userId: string) {
+    return await messageRepository.countAssistantMessagesByUserId(userId);
 }

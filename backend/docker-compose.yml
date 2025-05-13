@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+    qdrant_juri_assist:
+        container_name: qdrant_juri_assist
+        image: qdrant/qdrant
+        ports:
+            - "6333:6333"
+
+    postgres_juri_assist:
+        container_name: postgres_juri_assist
+        image: postgres
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=juriAssist
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+
+    ollama_juri_assist:
+        container_name: ollama_juri_assist
+        image: ollama/ollama
+        ports:
+            - "11434:11434"
+        volumes:
+            - ollama_data:/root/.ollama
+        restart: unless-stopped
+        entrypoint: >
+            sh -c "
+              ollama serve & 
+              sleep 5 && 
+              ollama pull llama3:8b && 
+              ollama pull mxbai-embed-large &&
+              wait
+            "
+
+    juri_assist:
+        container_name: juri_assist
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "3000:3000"
+        depends_on:
+            - postgres_juri_assist
+            - qdrant_juri_assist
+            - ollama_juri_assist
+        environment:
+            - NODE_ENV=production
+            - DATABASE_URL=postgres://postgres:postgres@postgres_juri_assist:5432/juriAssist
+            - OLLAMA_BASE_URL=http://ollama_juri_assist:11434
+            - QDRANT_URL=http://qdrant_juri_assist:6333
+
+volumes:
+    postgres_data:
+    ollama_data:

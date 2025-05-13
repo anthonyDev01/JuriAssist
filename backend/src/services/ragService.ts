@@ -1,4 +1,4 @@
-import "dotenv/config";
+
 import {
     ChatPromptTemplate,
     MessagesPlaceholder,
@@ -8,94 +8,99 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { Prompts } from "../utils/prompt";
 import { ChatOllama } from "@langchain/ollama";
 import { AzureChatOpenAI } from "@langchain/openai";
-
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { createHistoryAwareRetriever } from "langchain/chains/history_aware_retriever";
 import { Runnable } from "@langchain/core/runnables";
 import { getEmbeddings, getModel } from "./ollamaService";
-import { createCollection, getRetriever, saveVectors } from "./qdrantService";
-import { extractTextFromFile } from "./fileService";
-import { getMessagesByUserId, saveMessage } from "./messagesService";
+import * as qdrantService from "./qdrantService";
+import * as messageService from "./messagesService";
 
 export async function createCollectionToQdrant(collectionName: string) {
     try {
         const vectorSize = 1024;
-        await createCollection(collectionName, vectorSize);
+        await qdrantService.createCollection(collectionName, vectorSize);
     } catch (err) {
         console.error("Error creating collection:", err);
     }
 }
 
-export async function saveToQdrant(filePath: string, userId: string) {
-    try {
-        const documents = await extractTextFromFile(filePath);
+export async function generateResponse(userQuestion: string, userId: string) {
+    const embeddings = getEmbeddings();
 
-        console.log(`Total pieces to be stored: ${documents.length}`);
+    const model = getModel();
 
-        const embeddings = getEmbeddings();
+    const retriever = await qdrantService.getRetriever(embeddings, userId, {
+        k: 10,
+    });
 
-        const data = documents.map((doc, index) => ({
-            id: index,
-            metadata: doc.metadata || {},
-            content: doc.pageContent,
-        }));
+    const historyAwareRetriever = await getHistoryAwareRetriever(
+        model,
+        retriever
+    );
 
-        await saveVectors(data, embeddings, userId);
-    } catch (err: any) {
-        console.error(err);
-        throw err;
-    }
+    const context = await getContext(userQuestion, historyAwareRetriever);
+
+    const contextualizedRagchain = await createContextualizedRagchain(
+        model,
+        historyAwareRetriever,
+        false
+    );
+
+    saveUserMessage(userQuestion, "user", userId);
+
+    const ragMessages = await messageService.getMessagesByUserId(userId);
+
+    const chatHistory = convertRagMessagesToChatHistory(ragMessages);
+
+    const response = await contextualizedRagchain.invoke({
+        input: userQuestion,
+        chat_history: chatHistory,
+        context,
+    });
+
+    saveUserMessage(response.answer, "assistant", userId);
+
+    return response.answer;
 }
 
-export async function generateResponse(userQuestion: string, userId: string) {
-    try {
-        const embeddings = getEmbeddings();
+export async function generateInsght(insght: string, userId: string) {
+    const embeddings = getEmbeddings();
 
-        const model = getModel();
+    const model = getModel();
 
-        const retriever = await getRetriever(embeddings, userId, {
-            k: 10,
-        });
+    const retriever = await qdrantService.getRetriever(embeddings, userId, {
+        k: 10,
+    });
 
-        const historyAwareRetriever = await getHistoryAwareRetriever(
-            model,
-            retriever
-        );
+    const historyAwareRetriever = await getHistoryAwareRetriever(
+        model,
+        retriever
+    );
 
-        const context = await getContext(userQuestion, historyAwareRetriever);
+    const context = await getContext(insght, historyAwareRetriever);
 
-        const contextualizedRagchain = await createContextualizedRagchain(
-            model,
-            historyAwareRetriever
-        );
+    const contextualizedRagchain = await createContextualizedRagchain(
+        model,
+        historyAwareRetriever,
+        true
+    );
 
-        saveUserMessage(userQuestion, "user", userId);
+    const response = await contextualizedRagchain.invoke({
+        input: insght,
+        chat_history: [],
+        context,
+    });
 
-        const ragMessages = await getMessagesByUserId(userId);
-
-        const chatHistory = convertRagMessagesToChatHistory(ragMessages);
-
-        const response = await contextualizedRagchain.invoke({
-            input: userQuestion,
-            chat_history: chatHistory,
-            context,
-        });
-
-        saveUserMessage(response.answer, "ia", userId);
-
-        return response.answer;
-    } catch (err: any) {
-        console.error("Error:", err);
-        throw err;
-    }
+    return response.answer;
 }
 
 async function createContextualizedRagchain(
     model: ChatOllama | AzureChatOpenAI,
-    retriever: Runnable
+    retriever: Runnable,
+    isInsights: boolean
 ) {
     const qaPrompt = ChatPromptTemplate.fromMessages([
-        ["system", Prompts.QA_PROMPT],
+        ["system", isInsights ? Prompts.QA_INSIGHTS : Prompts.QA_PROMPT],
         ["system", "{context}"],
         new MessagesPlaceholder("chat_history"),
         ["human", "{input}"],
@@ -143,7 +148,7 @@ async function getContext(
 }
 
 async function saveUserMessage(content: string, owner: string, userId: string) {
-    saveMessage({
+    messageService.saveMessage({
         content,
         owner,
         userId,

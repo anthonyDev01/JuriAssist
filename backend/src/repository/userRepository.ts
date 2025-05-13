@@ -1,4 +1,5 @@
 import prisma from "../orm/prisma";
+import { UserRequest } from "../types/userRequest";
 
 export async function findUserById(id: string) {
     return await prisma.user.findUnique({
@@ -8,7 +9,7 @@ export async function findUserById(id: string) {
     });
 }
 
-export function saveUser(data: any) {
+export function saveUser(data: UserRequest) {
     return prisma.user.create({
         data,
     });

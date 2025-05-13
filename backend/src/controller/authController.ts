@@ -1,4 +1,4 @@
-import { Express, Router, Request, Response } from "express";
+import { Express, Router } from "express";
 import { createUserAccount, signIn } from "../services/authService";
 import { requestBodyValidator } from "../middlewares/request-body-validator";
 import { loginSchema, registerSchema } from "../schemas/auth-schema";
@@ -9,7 +9,7 @@ export default function authController(app: Express) {
     router.post(
         "/register",
         requestBodyValidator(registerSchema),
-        async (req, res) => {
+        async (req, res, next) => {
             try {
                 const body = req.body;
                 await createUserAccount(body);
@@ -18,9 +18,7 @@ export default function authController(app: Express) {
                     message: "Usuário criado com sucesso.",
                 });
             } catch (error: any) {
-                console.log(error);
-
-                res.status(500).json({ error: "Erro inesperado." });
+                next(error);
             }
         }
     );
@@ -28,36 +26,14 @@ export default function authController(app: Express) {
     router.post(
         "/sign-in",
         requestBodyValidator(loginSchema),
-        async (req, res) => {
+        async (req, res, next) => {
             try {
                 const { email, password } = req.body;
                 const authData = await signIn(email, password);
 
                 res.status(200).json(authData);
             } catch (error: any) {
-                if (error.message === "Usuario não encontrado") {
-                    res.status(404).send({
-                        error: error.message,
-                    });
-                    return;
-                }
-
-                if (
-                    error.message ===
-                    "Esta conta foi desativada e não pode ser utilizada."
-                ) {
-                    res.status(403).send({ error: error.message });
-                    return;
-                }
-
-                if (error.message === "Senha incorreta.") {
-                    res.status(401).send({ error: error.message });
-                    return;
-                }
-
-                console.error(error);
-
-                res.status(500).json({ error: "Erro inesperado." });
+                next(error);
             }
         }
     );
