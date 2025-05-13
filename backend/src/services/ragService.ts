@@ -1,4 +1,3 @@
-
 import {
     ChatPromptTemplate,
     MessagesPlaceholder,
@@ -46,8 +45,6 @@ export async function generateResponse(userQuestion: string, userId: string) {
         false
     );
 
-    saveUserMessage(userQuestion, "user", userId);
-
     const ragMessages = await messageService.getMessagesByUserId(userId);
 
     const chatHistory = convertRagMessagesToChatHistory(ragMessages);
@@ -58,6 +55,7 @@ export async function generateResponse(userQuestion: string, userId: string) {
         context,
     });
 
+    saveUserMessage(userQuestion, "user", userId);
     saveUserMessage(response.answer, "assistant", userId);
 
     return response.answer;
