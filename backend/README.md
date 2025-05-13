@@ -39,9 +39,9 @@ Para executar o backend localmente, você precisará:
 
 Baixe o projeto em seu computador através do comando:
 
-\`\`\`bash
-git clone https://github.com/seu-usuario/juriAssist.git
-\`\`\`
+```bash
+https://github.com/anthonyDev01/JuriAssist.git
+```
 
 **ou**
 
@@ -53,19 +53,18 @@ git clone https://github.com/seu-usuario/juriAssist.git
 ## 🔄 Instalação e Execução
 
 1. Navegue até a pasta do backend:
-   \`\`\`bash
+   ```bash
    cd juriAssist/backend
-   \`\`\`
-
+   ```
 2. Execute o comando para construir os containers Docker:
-   \`\`\`bash
+   ```bash
    docker-compose build
-   \`\`\`
+   ```
 
 3. Execute o comando para iniciar os containers:
-   \`\`\`bash
+   ```bash
    docker-compose up -d
-   \`\`\`
+   ```
 
 Este comando iniciará todos os serviços necessários:
 
@@ -74,13 +73,15 @@ Este comando iniciará todos os serviços necessários:
 -   Serviço Qdrant para busca vetorial
 -   Integração com Ollama (que deve estar instalado em sua máquina)
 
+> ⚠️ **Atenção**: A instalação do Ollama pode levar cerca de 10 minutos dependendo da sua velocidade de internet.
+
 ## 🌐 Documentação da API
 
 A documentação da API está disponível através do Swagger UI:
 
-\`\`\`
+```
 http://localhost:3000/swagger
-\`\`\`
+```
 
 Através desta interface, você pode explorar e testar todos os endpoints disponíveis.
 
@@ -88,7 +89,7 @@ Através desta interface, você pode explorar e testar todos os endpoints dispon
 
 O sistema utiliza PostgreSQL para armazenar:
 
--   Metadados de documentos
+-   Registro de atividades
 -   Histórico de interações com a IA
 -   Configurações do sistema
 
@@ -112,6 +113,3 @@ O sistema utiliza Ollama para executar modelos de IA localmente, garantindo:
 
 Por padrão, o sistema está configurado para utilizar o modelo Llama 3 8B, mas você pode configurar outros modelos disponíveis no Ollama conforme sua necessidade.
 
-## 📝 Logs e Monitoramento
-
-O sistema registra logs detalhados para monitoramento e depuração, disponíveis nos containers Docker.
