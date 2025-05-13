@@ -1,20 +1,23 @@
-import { jwtDecode } from "jwt-decode";
-import { createContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, ReactNode, useEffect, useState } from "react";
+import { AuthResponse, User } from "../models/user";
 import { useNavigate } from "react-router-dom";
-import type { AuthResponse } from "../models/user";
+import { jwtDecode } from "jwt-decode";
 
 interface AuthContextProps {
     children: ReactNode;
 }
 
 interface AuthContextType {
-    token: string | null;
     userId: string | null;
+    token: string | null;
     login: (data: AuthResponse) => void;
     logout: () => void;
 }
 
 interface Token {
+    id: string;
+    name: string;
+    email: string;
     sub: string;
     iat: number;
     exp: number;

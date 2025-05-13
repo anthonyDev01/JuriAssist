@@ -1,10 +1,10 @@
 import axios from "axios";
 
 export const api = axios.create({
-    //baseURL: "http://167.99.7.170:8081/api/",
-    //baseURL: import.meta.env.VITE_API_URL,
-    baseURL: "http://localhost:3000/api",
+    baseURL: import.meta.env.VITE_API_URL,
 });
+
+console.log(import.meta.env.VITE_API_URL);
 
 export function getHeaders() {
     return {
@@ -26,11 +26,26 @@ export function getParamsSearch(value: string) {
 
 export function getAuthorization() {
     const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("user_id");
 
     return {
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            userId,
+        },
+    };
+}
+
+export function getAuthorizationFormData() {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("user_id");
+
+    return {
+        headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+            userId,
         },
     };
 }

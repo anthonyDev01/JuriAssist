@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import useAuth from "../../core/hooks/useAuth";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -12,47 +13,58 @@ import {
 } from "../components/ui/card";
 import { toast } from "../components/ui/use-toast";
 import { ArrowLeft, Eye, EyeOff, Scale } from "lucide-react";
-import { Link } from "react-router-dom";
-import useAuth from "../../core/hooks/useAuth";
+import { Link, useNavigate } from "react-router-dom";
 import { api, getHeaders } from "../../core/service/api";
-import { AuthResponse } from "../../core/models/user";
 
-interface LoginFormData {
+interface RegisterFormData {
+    name: string;
     email: string;
     password: string;
+    confirmPassword: string;
 }
 
-const Login = () => {
+const Register = () => {
     const {
         register,
         handleSubmit,
+        watch,
         formState: { errors },
-    } = useForm<LoginFormData>();
-    const { login } = useAuth();
+    } = useForm<RegisterFormData>();
+
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const navigate = useNavigate();
 
-    const onSubmit = async (data: LoginFormData) => {
+    const onSubmit = async (data: RegisterFormData) => {
+        const { confirmPassword, ...payload } = data;
         setIsLoading(true);
-        api.post<AuthResponse>(
-            "/auth/sign-in",
-            JSON.stringify(data),
-            getHeaders()
-        )
+        api.post<any>("/auth/register", JSON.stringify(payload), getHeaders())
             .then((response) => {
                 toast({
-                    title: "Login realizado com sucesso",
-                    description: "Bem-vindo ao JuriAssist",
+                    title: "Cadastro realizado com sucesso",
+                    description: "Você já pode fazer login no sistema",
                 });
                 setTimeout(() => {
-                    login(response.data);
+                    register(response.data);
                     setIsLoading(false);
+                    navigate("/login");
+                    console.log("aqui");
                 }, 2500);
             })
             .catch((err) => {
+                if (err.status === 409) {
+                    toast({
+                        title: "Erro ao cadastrar",
+                        description: "O email desse usuario ja foi cadastrado",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
                 toast({
-                    title: "Erro ao fazer login",
-                    description: "Verifique suas credenciais e tente novamente",
+                    title: "Erro ao cadastrar",
+                    description: "Verifique os dados e tente novamente",
                     variant: "destructive",
                 });
                 setIsLoading(false);
@@ -61,6 +73,10 @@ const Login = () => {
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setShowConfirmPassword(!showConfirmPassword);
     };
 
     return (
@@ -90,7 +106,7 @@ const Login = () => {
                         JuriAssist
                     </CardTitle>
                     <CardDescription className="text-center">
-                        Entre com sua conta para acessar o sistema
+                        Crie sua conta para acessar o sistema
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -98,6 +114,27 @@ const Login = () => {
                         onSubmit={handleSubmit(onSubmit)}
                         className="space-y-4"
                     >
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="name"
+                                className="text-sm font-medium"
+                            >
+                                Nome
+                            </label>
+                            <Input
+                                id="name"
+                                placeholder="Seu nome completo"
+                                className="bg-secondary/50 border-0"
+                                {...register("name", {
+                                    required: "Nome é obrigatório",
+                                })}
+                            />
+                            {errors.name && (
+                                <p className="text-sm text-red-500">
+                                    {errors.name.message}
+                                </p>
+                            )}
+                        </div>
                         <div className="space-y-2">
                             <label
                                 htmlFor="email"
@@ -135,6 +172,11 @@ const Login = () => {
                                     className="bg-secondary/50 border-0 pr-10"
                                     {...register("password", {
                                         required: "Senha é obrigatória",
+                                        minLength: {
+                                            value: 6,
+                                            message:
+                                                "A senha deve ter pelo menos 6 caracteres",
+                                        },
                                     })}
                                 />
                                 <button
@@ -155,23 +197,66 @@ const Login = () => {
                                 </p>
                             )}
                         </div>
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="confirmPassword"
+                                className="text-sm font-medium"
+                            >
+                                Confirmar Senha
+                            </label>
+                            <div className="relative">
+                                <Input
+                                    id="confirmPassword"
+                                    type={
+                                        showConfirmPassword
+                                            ? "text"
+                                            : "password"
+                                    }
+                                    placeholder="••••••••"
+                                    className="bg-secondary/50 border-0 pr-10"
+                                    {...register("confirmPassword", {
+                                        required:
+                                            "Confirmação de senha é obrigatória",
+                                        validate: (value) =>
+                                            value === watch("password") ||
+                                            "As senhas não coincidem",
+                                    })}
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    onClick={toggleConfirmPasswordVisibility}
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
+                            {errors.confirmPassword && (
+                                <p className="text-sm text-red-500">
+                                    {errors.confirmPassword.message}
+                                </p>
+                            )}
+                        </div>
                         <Button
                             type="submit"
                             className="w-full bg-purple-600 hover:bg-purple-700"
                             disabled={isLoading}
                         >
-                            {isLoading ? "Entrando..." : "Entrar"}
+                            {isLoading ? "Cadastrando..." : "Cadastrar"}
                         </Button>
                     </form>
                 </CardContent>
                 <CardFooter className="flex justify-center">
                     <p className="text-sm text-center">
-                        Não tem uma conta?{" "}
+                        Já tem uma conta?{" "}
                         <Link
-                            to="/register"
+                            to="/login"
                             className="text-purple-400 hover:underline"
                         >
-                            Cadastre-se
+                            Faça login
                         </Link>
                     </p>
                 </CardFooter>
@@ -180,4 +265,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default Register;
