@@ -40,9 +40,9 @@ Para executar o frontend localmente, você precisará:
 
 Baixe o projeto em seu computador através do comando:
 
-\`\`\`bash
-git clone https://github.com/seu-usuario/juriAssist.git
-\`\`\`
+```bash
+https://github.com/anthonyDev01/JuriAssist.git
+```
 
 **ou**
 
@@ -56,30 +56,30 @@ git clone https://github.com/seu-usuario/juriAssist.git
 Após a instalação:
 
 1. Navegue até a pasta do frontend:
-   \`\`\`bash
+  ```bash
    cd juriAssist/frontend
-   \`\`\`
+  ```
 
 2. Instale as dependências:
-   \`\`\`bash
+   ```bash
    npm install
-   \`\`\`
+   ```
 
 ## ▶️ Execução
 
 Execute o projeto com o seguinte comando:
 
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 ## 🌐 Visualização
 
 Abra a janela do seu navegador web padrão e acesse o seguinte endereço pela barra de pesquisa:
 
-\`\`\`
+```bash
 http://localhost:5173
-\`\`\`
+```
 
 ## 📱 Responsividade
 
